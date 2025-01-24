@@ -4,7 +4,7 @@ from database import db
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "your secret key"
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:admin123@127.0.0.1:3306/flask-crud'
 
 login_manager = LoginManager()
 db.init_app(app)
@@ -43,7 +43,7 @@ def create_user():
     password = data.get("password")
 
     if username and password:
-        user = User(username=username, password=password)
+        user = User(username=username, password=password, role='user')
         db.session.add(user)
         db.session.commit()
         return jsonify({"message": "User created"})
@@ -63,6 +63,9 @@ def read_user(user_id):
 def update_user(user_id):
     user = User.query.get(user_id)
     data = request.json
+
+    if user_id != current_user.id and current_user.role == "user":
+        return jsonify({"message": "Access denied"}), 403
    
     if user and data.get("password"):
         user.password = data.get("password")
@@ -74,6 +77,9 @@ def update_user(user_id):
 @login_required
 def delete_user(user_id):
     user = User.query.get(user_id)
+
+    if current_user.role != 'admin':
+        return jsonify({"message": "Access denied"}), 403
 
     if user_id == current_user.id:
         return jsonify({"message": "User cannot be deleted"}), 403
